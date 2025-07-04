@@ -2,13 +2,6 @@
 composer.lock
 /vendor
 
-# Frontend Assets
-/node_modules
-
-# Logs
-npm-debug.log
-yarn-error.log
-
 # Caches
 .phpunit.cache
 .phpunit.result.cache
@@ -23,10 +16,3 @@ _ide_helper_models.php
 /.idea
 /.fleet
 /.vscode
-
-# Misc
-phpunit.xml
-phpstan.neon
-testbench.yaml
-/docs
-/coverage
