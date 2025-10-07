@@ -66,7 +66,7 @@ it('dispatches event when failure attempts have been reached', function () {
             public function idle(
                 callable $callback,
                 ?callable $query = null,
-                int $timeout = 300
+                int|callable $timeout = 300
             ): void {
                 throw new RuntimeException('Simulated exception');
             }
