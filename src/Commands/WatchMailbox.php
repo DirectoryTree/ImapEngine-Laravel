@@ -20,7 +20,7 @@ class WatchMailbox extends Command
      *
      * @var string
      */
-    protected $signature = 'imap:watch {mailbox} {folder?} {--with=} {--timeout=30} {--attempts=5} {--debug=false}';
+    protected $signature = 'imap:watch {mailbox} {folder?} {--method=idle} {--with=} {--timeout=30} {--attempts=5} {--debug=false}';
 
     /**
      * The console command description.
@@ -48,11 +48,18 @@ class WatchMailbox extends Command
             try {
                 $folder = $this->folder($mailbox);
 
-                $folder->idle(
-                    new HandleMessageReceived($this, $attempts, $lastReceivedAt),
-                    new ConfigureIdleQuery($with),
-                    $this->option('timeout')
-                );
+                match ($this->option('method')) {
+                    'idle' => $folder->idle(
+                        new HandleMessageReceived($this, $attempts, $lastReceivedAt),
+                        new ConfigureIdleQuery($with),
+                        $this->option('timeout'),
+                    ),
+                    'poll' => $folder->poll(
+                        new HandleMessageReceived($this, $attempts, $lastReceivedAt),
+                        new ConfigureIdleQuery($with),
+                        $this->option('timeout'),
+                    ),
+                };
             } catch (Exception $e) {
                 if ($this->isMessageMissing($e)) {
                     return;
