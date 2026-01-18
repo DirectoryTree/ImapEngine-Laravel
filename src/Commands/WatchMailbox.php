@@ -12,6 +12,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
+use Symfony\Component\Console\Exception\InvalidOptionException;
 
 class WatchMailbox extends Command
 {
@@ -58,6 +59,9 @@ class WatchMailbox extends Command
                         new HandleMessageReceived($this, $attempts, $lastReceivedAt),
                         new ConfigureIdleQuery($with),
                         $this->option('timeout'),
+                    ),
+                    default => throw new InvalidOptionException(
+                        "Invalid method [{$this->option('method')}]. Valid options are [idle, poll]."
                     ),
                 };
             } catch (Exception $e) {
