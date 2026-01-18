@@ -7,7 +7,6 @@ use DirectoryTree\ImapEngine\Laravel\Events\MailboxWatchAttemptsExceeded;
 use DirectoryTree\ImapEngine\Laravel\Facades\Imap;
 use DirectoryTree\ImapEngine\Laravel\Support\LoopInterface;
 use DirectoryTree\ImapEngine\MailboxInterface;
-use DirectoryTree\ImapEngine\Message;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Event;
@@ -35,6 +34,10 @@ class WatchMailbox extends Command
      */
     public function handle(LoopInterface $loop): void
     {
+        if (! in_array($method = $this->option('method'), ['idle', 'poll'])) {
+            throw new InvalidOptionException("Invalid method [{$method}]. Valid options are [idle, poll].");
+        }
+
         $mailbox = Imap::mailbox($name = $this->argument('mailbox'));
 
         $with = explode(',', $this->option('with'));
@@ -59,9 +62,6 @@ class WatchMailbox extends Command
                         new HandleMessageReceived($this, $attempts, $lastReceivedAt),
                         new ConfigureIdleQuery($with),
                         $this->option('timeout'),
-                    ),
-                    default => throw new InvalidOptionException(
-                        "Invalid method [{$this->option('method')}]. Valid options are [idle, poll]."
                     ),
                 };
             } catch (Exception $e) {
