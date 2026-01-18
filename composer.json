@@ -17,7 +17,7 @@
     ],
     "require": {
         "php": "^8.1",
-        "directorytree/imapengine": "^1.13.0",
+        "directorytree/imapengine": "^1.19.0",
         "illuminate/contracts": "^10.0|^11.0|^12.0"
     },
     "require-dev": {

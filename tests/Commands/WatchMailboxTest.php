@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
 use RuntimeException;
+use Symfony\Component\Console\Exception\InvalidOptionException;
 
 use function Pest\Laravel\artisan;
 
@@ -50,6 +51,35 @@ it('can watch mailbox', function () {
         fn (MessageReceived $event) => $event->message->is($message)
     );
 });
+
+it('can watch mailbox using method', function (string $method) {
+    Config::set('imap.mailboxes.test', [
+        'host' => 'localhost',
+        'port' => 993,
+        'encryption' => 'ssl',
+        'username' => '',
+        'password' => '',
+    ]);
+
+    Imap::fake('test', folders: [
+        new FakeFolder('inbox', messages: [
+            $message = new FakeMessage(uid: 1),
+        ]),
+    ]);
+
+    App::bind(LoopInterface::class, LoopFake::class);
+
+    Event::fake();
+
+    artisan(WatchMailbox::class, [
+        'mailbox' => 'test',
+        '--method' => $method,
+    ])->assertSuccessful();
+
+    Event::assertDispatched(
+        fn (MessageReceived $event) => $event->message->is($message)
+    );
+})->with(['idle', 'poll']);
 
 it('dispatches event when failure attempts have been reached', function () {
     Config::set('imap.mailboxes.test', [
@@ -91,3 +121,27 @@ it('dispatches event when failure attempts have been reached', function () {
             && $event->exception->getMessage() === 'Simulated exception';
     });
 });
+
+it('throws exception when invalid method is provided', function () {
+    Config::set('imap.mailboxes.test', [
+        'host' => 'localhost',
+        'port' => 993,
+        'encryption' => 'ssl',
+        'username' => '',
+        'password' => '',
+    ]);
+
+    Imap::fake('test', folders: [
+        new FakeFolder('inbox'),
+    ]);
+
+    App::bind(LoopInterface::class, LoopFake::class);
+
+    artisan(WatchMailbox::class, [
+        'mailbox' => 'test',
+        '--method' => 'invalid',
+    ]);
+})->throws(
+    InvalidOptionException::class,
+    'Invalid method [invalid]. Valid options are [idle, poll].'
+);

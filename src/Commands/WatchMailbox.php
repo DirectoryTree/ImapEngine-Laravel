@@ -7,11 +7,11 @@ use DirectoryTree\ImapEngine\Laravel\Events\MailboxWatchAttemptsExceeded;
 use DirectoryTree\ImapEngine\Laravel\Facades\Imap;
 use DirectoryTree\ImapEngine\Laravel\Support\LoopInterface;
 use DirectoryTree\ImapEngine\MailboxInterface;
-use DirectoryTree\ImapEngine\Message;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
+use Symfony\Component\Console\Exception\InvalidOptionException;
 
 class WatchMailbox extends Command
 {
@@ -20,7 +20,7 @@ class WatchMailbox extends Command
      *
      * @var string
      */
-    protected $signature = 'imap:watch {mailbox} {folder?} {--with=} {--timeout=30} {--attempts=5} {--debug=false}';
+    protected $signature = 'imap:watch {mailbox} {folder?} {--method=idle} {--with=} {--timeout=30} {--attempts=5} {--debug=false}';
 
     /**
      * The console command description.
@@ -34,6 +34,10 @@ class WatchMailbox extends Command
      */
     public function handle(LoopInterface $loop): void
     {
+        if (! in_array($method = $this->option('method'), ['idle', 'poll'])) {
+            throw new InvalidOptionException("Invalid method [{$method}]. Valid options are [idle, poll].");
+        }
+
         $mailbox = Imap::mailbox($name = $this->argument('mailbox'));
 
         $with = explode(',', $this->option('with'));
@@ -48,11 +52,18 @@ class WatchMailbox extends Command
             try {
                 $folder = $this->folder($mailbox);
 
-                $folder->idle(
-                    new HandleMessageReceived($this, $attempts, $lastReceivedAt),
-                    new ConfigureIdleQuery($with),
-                    $this->option('timeout')
-                );
+                match ($this->option('method')) {
+                    'idle' => $folder->idle(
+                        new HandleMessageReceived($this, $attempts, $lastReceivedAt),
+                        new ConfigureIdleQuery($with),
+                        $this->option('timeout'),
+                    ),
+                    'poll' => $folder->poll(
+                        new HandleMessageReceived($this, $attempts, $lastReceivedAt),
+                        new ConfigureIdleQuery($with),
+                        $this->option('timeout'),
+                    ),
+                };
             } catch (Exception $e) {
                 if ($this->isMessageMissing($e)) {
                     return;
