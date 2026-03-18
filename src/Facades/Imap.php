@@ -29,7 +29,7 @@ class Imap extends Facade
         array $folders = [],
         array $capabilities = []
     ): FakeMailbox {
-        /** @var \DirectoryTree\ImapEngine\Laravel\ImapManager $manager */
+        /** @var ImapManager $manager */
         $manager = static::getFacadeRoot();
 
         $fake = new FakeMailbox($config, $folders, $capabilities);
