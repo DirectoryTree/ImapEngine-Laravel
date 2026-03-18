@@ -20,7 +20,14 @@ class WatchMailbox extends Command
      *
      * @var string
      */
-    protected $signature = 'imap:watch {mailbox} {folder?} {--method=idle} {--with=} {--timeout=30} {--attempts=5} {--debug=false}';
+    protected $signature = 'imap:watch
+                            {mailbox : The mailbox to watch}
+                            {folder? : The folder to watch}
+                            {--method=idle : The watch method (idle or poll)}
+                            {--with= : Comma-separated list of message parts to fetch}
+                            {--timeout=30 : The timeout in minutes}
+                            {--attempts=5 : Maximum number of retry attempts}
+                            {--debug=false : Enable debug mode}';
 
     /**
      * The console command description.
