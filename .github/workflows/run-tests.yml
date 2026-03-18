@@ -13,16 +13,16 @@ jobs:
         php: [8.4, 8.3, 8.2]
         include:
           - php: 8.4
+            laravel: 13.*
+            testbench: 11.*
+
+          - php: 8.3
             laravel: 12.*
             testbench: 10.*
 
-          - php: 8.3
+          - php: 8.2
             laravel: 11.*
             testbench: 9.*
-
-          - php: 8.2
-            laravel: 10.*
-            testbench: 8.*
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.os }}
 
