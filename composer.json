@@ -24,9 +24,9 @@
         "laravel/pint": "^1.14",
         "nunomaduro/collision": "^7.10|^8.1",
         "orchestra/testbench": "^8.22|^9.0|^10.0|^11.0",
-        "pestphp/pest": "^2.0|^3.0",
-        "pestphp/pest-plugin-arch": "^2.0|^3.0",
-        "pestphp/pest-plugin-laravel": "^2.0|^3.0",
+        "pestphp/pest": "^2.0|^3.0|^4.0",
+        "pestphp/pest-plugin-arch": "^2.0|^3.0|^4.0",
+        "pestphp/pest-plugin-laravel": "^2.0|^3.0|^4.0",
         "spatie/laravel-ray": "^1.35"
     },
     "autoload": {
