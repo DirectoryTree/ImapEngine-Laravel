@@ -11,6 +11,6 @@ class MessageReceived
      */
     public function __construct(
         public MessageInterface $message,
-        public ?string $mailbox = null,
+        public string $mailbox,
     ) {}
 }
