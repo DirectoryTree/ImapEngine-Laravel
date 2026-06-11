@@ -41,7 +41,9 @@ class ImapManager
             );
         }
 
-        return $this->mailboxes[$name] = $this->build($this->config['mailboxes'][$name]);
+        return $this->mailboxes[$name] = $this->build(
+            $this->config['mailboxes'][$name] + ['name' => $name]
+        );
     }
 
     /**
@@ -49,7 +51,7 @@ class ImapManager
      */
     public function register(string $name, array $config): static
     {
-        $this->mailboxes[$name] = $this->build($config);
+        $this->mailboxes[$name] = $this->build($config + ['name' => $name]);
 
         return $this;
     }

@@ -49,6 +49,7 @@ it('can watch mailbox', function () {
 
     Event::assertDispatched(
         fn (MessageReceived $event) => $event->message->is($message)
+            && $event->mailbox === 'test'
     );
 });
 
@@ -78,6 +79,7 @@ it('can watch mailbox using method', function (string $method) {
 
     Event::assertDispatched(
         fn (MessageReceived $event) => $event->message->is($message)
+            && $event->mailbox === 'test'
     );
 })->with(['idle', 'poll']);
 
