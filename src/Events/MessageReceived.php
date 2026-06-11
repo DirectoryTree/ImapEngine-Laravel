@@ -10,6 +10,7 @@ class MessageReceived
      * Create a new event instance.
      */
     public function __construct(
-        public MessageInterface $message
+        public MessageInterface $message,
+        public string $mailbox,
     ) {}
 }

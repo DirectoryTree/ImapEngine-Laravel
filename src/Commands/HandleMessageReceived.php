@@ -15,6 +15,7 @@ class HandleMessageReceived
      */
     public function __construct(
         protected WatchMailbox $command,
+        protected string $mailbox,
         protected int &$attempts = 0,
         protected ?CarbonInterface &$lastReceivedAt = null,
     ) {}
@@ -32,6 +33,6 @@ class HandleMessageReceived
 
         $this->lastReceivedAt = Date::now();
 
-        Event::dispatch(new MessageReceived($message));
+        Event::dispatch(new MessageReceived($message, $this->mailbox));
     }
 }
