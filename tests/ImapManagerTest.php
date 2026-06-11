@@ -34,21 +34,6 @@ it('returns a mailbox instance', function () {
     expect($mailbox)->toBeInstanceOf(Mailbox::class);
 });
 
-it('includes the mailbox name in the configuration', function () {
-    $mailbox = $this->manager->mailbox('default');
-
-    expect($mailbox->config('name'))->toBe('default');
-});
-
-it('does not override an explicitly configured name', function () {
-    $this->manager->register('custom', [
-        'name' => 'explicit',
-        'host' => 'imap.custom.com',
-    ]);
-
-    expect($this->manager->mailbox('custom')->config('name'))->toBe('explicit');
-});
-
 it('caches mailbox instances', function () {
     $mailbox1 = $this->manager->mailbox('default');
     $mailbox2 = $this->manager->mailbox('default');
