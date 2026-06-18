@@ -61,12 +61,12 @@ class WatchMailbox extends Command
 
                 match ($this->option('method')) {
                     'idle' => $folder->idle(
-                        new HandleMessageReceived($this, $attempts, $lastReceivedAt),
+                        new HandleMessageReceived($this, $name, $attempts, $lastReceivedAt),
                         new ConfigureIdleQuery($with),
                         $this->option('timeout'),
                     ),
                     'poll' => $folder->poll(
-                        new HandleMessageReceived($this, $attempts, $lastReceivedAt),
+                        new HandleMessageReceived($this, $name, $attempts, $lastReceivedAt),
                         new ConfigureIdleQuery($with),
                         $this->option('timeout'),
                     ),

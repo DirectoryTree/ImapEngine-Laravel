@@ -47,9 +47,9 @@ it('can watch mailbox', function () {
 
     artisan(WatchMailbox::class, ['mailbox' => 'test'])->assertSuccessful();
 
-    Event::assertDispatched(
-        fn (MessageReceived $event) => $event->message->is($message)
-    );
+    Event::assertDispatched(fn (MessageReceived $event) => (
+        $event->message->is($message) && $event->mailbox === 'test'
+    ));
 });
 
 it('can watch mailbox using method', function (string $method) {
@@ -76,9 +76,9 @@ it('can watch mailbox using method', function (string $method) {
         '--method' => $method,
     ])->assertSuccessful();
 
-    Event::assertDispatched(
-        fn (MessageReceived $event) => $event->message->is($message)
-    );
+    Event::assertDispatched(fn (MessageReceived $event) => (
+        $event->message->is($message) && $event->mailbox === 'test'
+    ));
 })->with(['idle', 'poll']);
 
 it('dispatches event when failure attempts have been reached', function () {
