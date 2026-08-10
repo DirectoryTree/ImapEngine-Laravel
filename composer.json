@@ -1,6 +1,6 @@
 {
     "name": "directorytree/imapengine-laravel",
-    "description": "This is my package imapengine-laravel",
+    "description": "Laravel integration for the ImapEngine package.",
     "keywords": [
         "Steve Bauman",
         "laravel",
