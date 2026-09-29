@@ -49,7 +49,7 @@ class ImapManager
      */
     public function register(string $name, array $config): static
     {
-        $this->mailboxes[$name] = $this->build($config);
+        $this->swap($name, $this->build($config));
 
         return $this;
     }
@@ -63,20 +63,30 @@ class ImapManager
     }
 
     /**
-     * Remove a mailbox from the in-memory cache.
+     * Disconnect a mailbox and remove it from the in-memory cache.
      */
     public function forget(string $name): static
     {
+        if (isset($this->mailboxes[$name])) {
+            $this->mailboxes[$name]->disconnect();
+        }
+
         unset($this->mailboxes[$name]);
 
         return $this;
     }
 
     /**
-     * Swap out a mailbox instance with a new one.
+     * Disconnect the previous mailbox and replace it with a new instance.
      */
     public function swap(string $name, MailboxInterface $mailbox): void
     {
+        if (($this->mailboxes[$name] ?? null) === $mailbox) {
+            return;
+        }
+
+        $this->forget($name);
+
         $this->mailboxes[$name] = $mailbox;
     }
 }

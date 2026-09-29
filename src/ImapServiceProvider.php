@@ -13,6 +13,8 @@ class ImapServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->mergeConfigFrom(__DIR__.'/../config/imap.php', 'imap');
+
         $this->app->singleton(ImapManager::class, function () {
             return new ImapManager(config('imap', []));
         });

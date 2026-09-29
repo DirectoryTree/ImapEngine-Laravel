@@ -32,7 +32,7 @@ class Imap extends Facade
         /** @var ImapManager $manager */
         $manager = static::getFacadeRoot();
 
-        $fake = new FakeMailbox($config, $folders, $capabilities);
+        $fake = FakeMailbox::make($config, $folders, $capabilities);
 
         $manager->swap($mailbox, $fake);
 
