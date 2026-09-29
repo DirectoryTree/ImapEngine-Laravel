@@ -5,6 +5,7 @@ namespace DirectoryTree\ImapEngine\Laravel\Commands;
 use DirectoryTree\ImapEngine\Exceptions\ImapConnectionException;
 use DirectoryTree\ImapEngine\Exceptions\ImapStreamException;
 use DirectoryTree\ImapEngine\FolderInterface;
+use DirectoryTree\ImapEngine\Idle\Events\EventInterface;
 use DirectoryTree\ImapEngine\Laravel\Events\MailboxWatchAttemptsExceeded;
 use DirectoryTree\ImapEngine\Laravel\Facades\Imap;
 use DirectoryTree\ImapEngine\Laravel\Support\LoopInterface;
@@ -25,25 +26,25 @@ class WatchMailbox extends Command
     protected $signature = 'imap:watch
                             {mailbox : The mailbox to watch}
                             {folder? : The folder to watch}
-                            {--method=idle : The watch method (idle or poll)}
-                            {--with= : Comma-separated message parts to fetch (flags, body, headers)}
+                            {--method=idle : The watch method (idle, poll, or events)}
+                            {--with= : Comma-separated message parts to fetch with idle or poll (flags, body, headers)}
                             {--timeout=30 : The IDLE renewal interval or polling frequency in seconds}
-                            {--attempts=5 : Maximum connection retries before a message is received}';
+                            {--attempts=5 : Maximum connection retries before a message or mailbox update is received}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Watch a mailbox for new messages.';
+    protected $description = 'Watch a mailbox for new messages or mailbox events.';
 
     /**
      * Execute the console command.
      */
     public function handle(LoopInterface $loop): void
     {
-        if (! in_array($method = $this->option('method'), ['idle', 'poll'])) {
-            throw new InvalidOptionException("Invalid method [{$method}]. Valid options are [idle, poll].");
+        if (! in_array($method = $this->option('method'), ['idle', 'poll', 'events'])) {
+            throw new InvalidOptionException("Invalid method [{$method}]. Valid options are [idle, poll, events].");
         }
 
         $timeout = (int) $this->option('timeout');
@@ -67,13 +68,17 @@ class WatchMailbox extends Command
 
         $lastReceivedAt = null;
 
-        $loop->run(function () use ($mailbox, $name, $method, $with, $timeout, $retries, &$attempts, &$lastReceivedAt) {
+        $handler = $method === 'events'
+            ? new HandleMailboxEventReceived($this, $name, $attempts, $lastReceivedAt)
+            : new HandleMessageReceived($this, $name, $attempts, $lastReceivedAt);
+
+        $loop->run(function () use ($mailbox, $name, $method, $with, $timeout, $retries, $handler, &$attempts, &$lastReceivedAt) {
             $receiving = false;
 
-            $callback = function (MessageInterface $message) use ($name, &$attempts, &$lastReceivedAt, &$receiving) {
+            $callback = function (MessageInterface|EventInterface $event) use ($handler, &$receiving) {
                 $receiving = true;
 
-                (new HandleMessageReceived($this, $name, $attempts, $lastReceivedAt))($message);
+                $handler($event);
 
                 $receiving = false;
             };
@@ -81,7 +86,11 @@ class WatchMailbox extends Command
             try {
                 $folder = $this->folder($mailbox);
 
-                $folder->{$method}($callback, new ConfigureIdleQuery($with), $timeout);
+                if ($method === 'events') {
+                    $folder->events($callback, $timeout);
+                } else {
+                    $folder->{$method}($callback, new ConfigureIdleQuery($with), $timeout);
+                }
             } catch (ImapConnectionException|ImapStreamException $e) {
                 // Listener failures must not restart the watcher, even for IMAP errors.
                 if ($receiving) {

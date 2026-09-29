@@ -129,7 +129,7 @@ it('limits connection retries and disconnects before retrying', function (string
     });
 
     Sleep::assertSleptTimes($retries);
-})->with(['idle', 'poll'])->with([
+})->with(['idle', 'poll', 'events'])->with([
     'closed connection' => ImapConnectionClosedException::class,
     'failed connection' => ImapConnectionFailedException::class,
     'timed out connection' => ImapConnectionTimedOutException::class,
@@ -157,7 +157,7 @@ it('throws exception when invalid method is provided', function () {
     ]);
 })->throws(
     InvalidOptionException::class,
-    'Invalid method [invalid]. Valid options are [idle, poll].'
+    'Invalid method [invalid]. Valid options are [idle, poll, events].'
 );
 
 it('rejects invalid options before resolving a mailbox', function (string $option, string $value) {
