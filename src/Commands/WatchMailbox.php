@@ -2,15 +2,17 @@
 
 namespace DirectoryTree\ImapEngine\Laravel\Commands;
 
+use DirectoryTree\ImapEngine\Exceptions\ImapConnectionException;
+use DirectoryTree\ImapEngine\Exceptions\ImapStreamException;
 use DirectoryTree\ImapEngine\FolderInterface;
 use DirectoryTree\ImapEngine\Laravel\Events\MailboxWatchAttemptsExceeded;
 use DirectoryTree\ImapEngine\Laravel\Facades\Imap;
 use DirectoryTree\ImapEngine\Laravel\Support\LoopInterface;
 use DirectoryTree\ImapEngine\MailboxInterface;
-use Exception;
+use DirectoryTree\ImapEngine\MessageInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Str;
+use Illuminate\Support\Sleep;
 use Symfony\Component\Console\Exception\InvalidOptionException;
 
 class WatchMailbox extends Command
@@ -24,10 +26,9 @@ class WatchMailbox extends Command
                             {mailbox : The mailbox to watch}
                             {folder? : The folder to watch}
                             {--method=idle : The watch method (idle or poll)}
-                            {--with= : Comma-separated list of message parts to fetch}
-                            {--timeout=30 : The timeout in minutes}
-                            {--attempts=5 : Maximum number of retry attempts}
-                            {--debug=false : Enable debug mode}';
+                            {--with= : Comma-separated message parts to fetch (flags, body, headers)}
+                            {--timeout=30 : The IDLE renewal interval or polling frequency in seconds}
+                            {--attempts=5 : Maximum connection retries before a message is received}';
 
     /**
      * The console command description.
@@ -45,9 +46,20 @@ class WatchMailbox extends Command
             throw new InvalidOptionException("Invalid method [{$method}]. Valid options are [idle, poll].");
         }
 
-        $mailbox = Imap::mailbox($name = $this->argument('mailbox'));
+        $timeout = (int) $this->option('timeout');
 
-        $with = explode(',', $this->option('with'));
+        $retries = (int) $this->option('attempts');
+
+        $with = array_filter(
+            array_map('trim', explode(',', $this->option('with'))),
+            filled(...),
+        );
+
+        if ($invalid = array_diff($with, ['flags', 'body', 'headers'])) {
+            throw new InvalidOptionException('Invalid message parts ['.implode(', ', $invalid).']. Valid options are [flags, body, headers].');
+        }
+
+        $mailbox = Imap::mailbox($name = $this->argument('mailbox'));
 
         $this->info("Watching mailbox [$name]...");
 
@@ -55,35 +67,31 @@ class WatchMailbox extends Command
 
         $lastReceivedAt = null;
 
-        $loop->run(function () use ($mailbox, $name, $with, &$attempts, &$lastReceivedAt) {
+        $loop->run(function () use ($mailbox, $name, $method, $with, $timeout, $retries, &$attempts, &$lastReceivedAt) {
+            $receiving = false;
+
+            $callback = function (MessageInterface $message) use ($name, &$attempts, &$lastReceivedAt, &$receiving) {
+                $receiving = true;
+
+                (new HandleMessageReceived($this, $name, $attempts, $lastReceivedAt))($message);
+
+                $receiving = false;
+            };
+
             try {
                 $folder = $this->folder($mailbox);
 
-                match ($this->option('method')) {
-                    'idle' => $folder->idle(
-                        new HandleMessageReceived($this, $name, $attempts, $lastReceivedAt),
-                        new ConfigureIdleQuery($with),
-                        $this->option('timeout'),
-                    ),
-                    'poll' => $folder->poll(
-                        new HandleMessageReceived($this, $name, $attempts, $lastReceivedAt),
-                        new ConfigureIdleQuery($with),
-                        $this->option('timeout'),
-                    ),
-                };
-            } catch (Exception $e) {
-                if ($this->isMessageMissing($e)) {
-                    return;
+                $folder->{$method}($callback, new ConfigureIdleQuery($with), $timeout);
+            } catch (ImapConnectionException|ImapStreamException $e) {
+                // Listener failures must not restart the watcher, even for IMAP errors.
+                if ($receiving) {
+                    throw $e;
                 }
 
-                if ($this->isDisconnection($e)) {
-                    sleep(2);
+                $mailbox->disconnect();
 
-                    return;
-                }
-
-                if ($attempts >= $this->option('attempts')) {
-                    $this->info("Exception: {$e->getMessage()}");
+                if ($attempts >= $retries) {
+                    $this->error("Exception: {$e->getMessage()}");
 
                     Event::dispatch(
                         new MailboxWatchAttemptsExceeded($name, $attempts, $e, $lastReceivedAt)
@@ -93,6 +101,10 @@ class WatchMailbox extends Command
                 }
 
                 $attempts++;
+
+                $this->warn("Connection failed. Retrying [$attempts/$retries] in 2 seconds.");
+
+                Sleep::for(2)->seconds();
             }
         });
     }
@@ -105,33 +117,5 @@ class WatchMailbox extends Command
         return ($folder = $this->argument('folder'))
              ? $mailbox->folders()->findOrFail($folder)
              : $mailbox->inbox();
-    }
-
-    /**
-     * Determine if the exception is due to a message missing error.
-     */
-    protected function isMessageMissing(Exception $e): bool
-    {
-        return Str::contains($e->getMessage(), [
-            'no longer exist',
-        ], true);
-    }
-
-    /**
-     * Determine if the exception is caused by a disconnection.
-     */
-    protected function isDisconnection(Exception $e): bool
-    {
-        return Str::contains($e->getMessage(), [
-            'connection reset by peer',
-            'temporary system problem',
-            'failed to fetch content',
-            'connection failed',
-            'empty response',
-            'not connected',
-            'no response',
-            'broken pipe',
-            'unavailable',
-        ], true);
     }
 }

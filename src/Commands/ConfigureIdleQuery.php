@@ -2,6 +2,7 @@
 
 namespace DirectoryTree\ImapEngine\Laravel\Commands;
 
+use DirectoryTree\ImapEngine\MessageData;
 use DirectoryTree\ImapEngine\MessageQueryInterface;
 
 class ConfigureIdleQuery
@@ -19,15 +20,15 @@ class ConfigureIdleQuery
     public function __invoke(MessageQueryInterface $query): MessageQueryInterface
     {
         if (in_array('flags', $this->with)) {
-            $query->withFlags();
+            $query->with(MessageData::flags());
         }
 
         if (in_array('body', $this->with)) {
-            $query->withBody();
+            $query->with(MessageData::text()->peek());
         }
 
         if (in_array('headers', $this->with)) {
-            $query->withHeaders();
+            $query->with(MessageData::headers()->peek());
         }
 
         return $query;
