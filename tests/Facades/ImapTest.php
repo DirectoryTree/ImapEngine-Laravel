@@ -39,6 +39,14 @@ it('can fake a mailbox with custom configuration', function () {
     expect($fake->config('username'))->toBe('fake@example.com');
 });
 
+it('can fake mailbox capabilities using the v2 capability collection', function () {
+    $fake = Imap::fake('default', capabilities: ['IMAP4rev1', 'IDLE', 'CONDSTORE']);
+
+    expect($fake->capabilities()->supports('IDLE'))->toBeTrue();
+    expect($fake->capabilities()->supports('CONDSTORE'))->toBeTrue();
+    expect($fake->capabilities()->supports('QRESYNC'))->toBeFalse();
+});
+
 it('can fake a mailbox with folders', function () {
     $inbox = new FakeFolder('inbox', ['\\HasNoChildren']);
     $sent = new FakeFolder('sent', ['\\HasNoChildren']);
@@ -75,9 +83,9 @@ it('can append messages to a fake mailbox folder', function () {
     $fake = Imap::fake('default', [], [$inbox]);
 
     $messageContent = "From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: Test Subject\r\n\r\nTest message body";
-    $uid = $fake->inbox()->messages()->append($messageContent);
+    $result = $fake->inbox()->messages()->append($messageContent);
 
-    expect($uid)->toBe(1);
+    expect($result->uid())->toBe(1);
 
     $messages = $fake->inbox()->messages();
 

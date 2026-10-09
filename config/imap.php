@@ -23,7 +23,7 @@ return [
             'password' => env('IMAP_PASSWORD'),
             'encryption' => env('IMAP_ENCRYPTION', 'ssl'),
             'validate_cert' => env('IMAP_VALIDATE_CERT', true),
-            'authentication' => env('IMAP_AUTHENTICATION', 'plain'),
+            'authentication' => env('IMAP_AUTHENTICATION', 'login'),
             'proxy' => [
                 'socket' => env('IMAP_PROXY_SOCKET'),
                 'username' => env('IMAP_PROXY_USERNAME'),
